@@ -318,6 +318,7 @@ RegisterNetEvent('esx_documents:client:copyForm', function(data)
     USER_DOCUMENTS[#USER_DOCUMENTS+1] = data
 end)
 
+-- Nui Callback
 RegisterNUICallback('form_close', function()
     SetNuiFocus(false, false)
 end)

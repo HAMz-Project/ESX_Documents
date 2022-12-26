@@ -35,7 +35,7 @@ lib.callback.register('esx_documents:server:DeleteDocument', function(source, id
     return false
 end)
 
-lib.callback.register('esx_documents:server:getPlayerDocuments', function(source, cb)
+lib.callback.register('esx_documents:server:getPlayerDocuments', function(source)
     local src = source
     local xPlayer = ESX.GetPlayerFromId(src)
     local forms = {}
