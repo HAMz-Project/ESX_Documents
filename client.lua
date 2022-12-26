@@ -13,6 +13,7 @@ end)
 RegisterNetEvent('esx:playerLoaded', function(xPlayer)
 	ESX.PlayerData = xPlayer
 	ESX.PlayerLoaded = true
+    GetAllUserForms()
 end)
 
 RegisterNetEvent('esx:onPlayerLogout',function()
@@ -25,7 +26,7 @@ RegisterNetEvent('esx:setJob', function(job)
 end)
 
 -- Functions
-local function GetAllUserForms()
+function GetAllUserForms()
     lib.callback('esx_documents:server:getPlayerDocuments', false, function(cb_forms)
         if cb_forms ~= nil then
             USER_DOCUMENTS = cb_forms
@@ -132,8 +133,10 @@ local function OpenMainMenu()
 end
 
 -- Events
-AddEventHandler('playerSpawned', function()
-    GetAllUserForms()
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName == GetCurrentResourceName() then
+        GetAllUserForms()
+    end
 end)
 
 RegisterNetEvent('esx_documents:client:CopyFormToPlayer', function(aPlayer)
