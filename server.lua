@@ -1,150 +1,101 @@
-ESX = nil
+-- Callback
+lib.callback.register('esx_documents:server:submitDocument', function(source, data)
+    local src = source
+    local xPlayer = ESX.GetPlayerFromId(src)
+    local db_form = nil
 
-
-TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
-
-
-
-
-ESX.RegisterServerCallback('esx_documents:submitDocument', function(source, cb, data)
-
-    local xPlayer = ESX.GetPlayerFromId(source)
-    local db_form = nil;
-    local _data = data;
-        --local owners = {}
-        --table.insert(owners, playerId)
-
-        --print(data)
-        --local status_data = { item = "lamp", x = lamp_position.x, y = lamp_position.y, z = lamp_position.z, heading = lamp_heading }
-
-        MySQL.Async.insert("INSERT INTO user_documents (owner, data) VALUES (@owner, @data)", {['@owner'] = xPlayer.identifier, ['@data'] = json.encode(data)}, function(id)
-
-            if id ~= nil then
-                MySQL.Async.fetchAll('SELECT * FROM user_documents where id = @id', {['@id']=id}, function (result)
-                    --print("Trying to dump: " .. dump(result))
-                    if(result[1] ~= nil) then
-                        db_form = result[1]
-                        db_form.data = json.decode(result[1].data)
-                        cb(db_form)
-                    end
-                end)
-            else
-                cb(db_form)
+    if xPlayer then
+        local id = MySQL.insert.await('INSERT INTO user_documents (owner, data) VALUES (?, ?)', { xPlayer.identifier,  json.encode(data) })
+        if id then
+            local result = MySQL.query.await('SELECT * FROM user_documents where id = ?', { id })
+            if result[1] then
+                db_form = result[1]
+                db_form.data = json.decode(result[1].data)
             end
-        end)
-end)
-
-ESX.RegisterServerCallback('esx_documents:deleteDocument', function(source, cb, id)
-
-    local db_document = nil;
-    local xPlayer = ESX.GetPlayerFromId(source)
-
-    MySQL.Async.execute('DELETE FROM user_documents WHERE id = @id AND owner = @owner',
-    {
-        ['@id']  = id,
-        ['@owner'] = xPlayer.identifier
-    }, function(rowsChanged)
-
-        if rowsChanged >= 1 then
-            TriggerClientEvent('esx:showNotification', source, _U('document_deleted'))
-            cb(true)
-        else
-            TriggerClientEvent('esx:showNotification', source, _U('document_delete_failed'))
-            cb(false)
         end
-        end)
-end)
-
-
-
-
-ESX.RegisterServerCallback('esx_documents:getPlayerDocuments', function(source, cb)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    local forms = {}
-    if xPlayer ~= nil then
-        MySQL.Async.fetchAll("SELECT * FROM user_documents WHERE owner = @owner", {['@owner'] = xPlayer.identifier}, function(result)
-
-           if #result > 0 then
-
-                for i=1, #result, 1 do
-
-                    local tmp_result = result[i]
-                    tmp_result.data = json.decode(result[i].data)
-
-                    table.insert(forms, tmp_result)
-                --print(dump(tmp_result))
-                end
-                cb(forms)
-            end
-
-    end)
     end
+
+    return db_form
 end)
 
+lib.callback.register('esx_documents:server:DeleteDocument', function(source, id)
+    local src = source
+    local xPlayer = ESX.GetPlayerFromId(src)
 
-ESX.RegisterServerCallback('esx_documents:getPlayerDetails', function(source, cb)
-    local xPlayer = ESX.GetPlayerFromId(source)
+    if xPlayer then
+        local delete = MySQL.update.await('DELETE FROM user_documents WHERE id = ? AND owner = ?', { id, xPlayer.identifier})
+        if delete then
+            TriggerClientEvent('esx:showNotification', src, _U('document_deleted'))
+            return true
+        else
+            TriggerClientEvent('esx:showNotification', src, _U('document_delete_failed'))
+        end
+    end
+
+    return false
+end)
+
+lib.callback.register('esx_documents:server:getPlayerDocuments', function(source, cb)
+    local src = source
+    local xPlayer = ESX.GetPlayerFromId(src)
+    local forms = {}
+
+    if xPlayer then
+        local result = MySQL.query.await('SELECT * FROM user_documents WHERE owner = ?', { xPlayer.identifier })
+        if #result > 0 then
+            for i=1, #result, 1 do
+                local tmp_result = result[i]
+                tmp_result.data = json.decode(result[i].data)
+                forms[#forms+1] = tmp_result
+            end
+        end
+    end
+
+    return forms
+end)
+
+lib.callback.register('esx_documents:server:getPlayerDetails', function(source)
+    local src = source
+    local xPlayer = ESX.GetPlayerFromId(src)
     local cb_data = nil
 
-    MySQL.Async.fetchAll("SELECT firstname, lastname, dateofbirth FROM users WHERE identifier = @owner", {['@owner'] = xPlayer.identifier}, function(result)
-
-        if result[1] ~= nil then
+    if xPlayer then
+        local result = MySQL.query.await('SELECT firstname, lastname, dateofbirth FROM users WHERE identifier = ?', { xPlayer.identifier })
+        if result[1] then
             cb_data = result[1]
-            cb(cb_data)
-        else
-            cb(cb_data)
         end
+    end
 
-    end)
-
+    return cb_data
 end)
 
-
-RegisterServerEvent('esx_documents:ShowToPlayer')
-AddEventHandler('esx_documents:ShowToPlayer', function(targetID, aForm)
-
-    TriggerClientEvent('esx_documents:viewDocument', targetID, aForm)
-
+-- Events
+RegisterServerEvent('esx_documents:server:ShowToPlayer', function(targetID, aForm)
+    TriggerClientEvent('esx_documents:client:ViewDocument', targetID, aForm)
 end)
 
-RegisterServerEvent('esx_documents:CopyToPlayer')
-AddEventHandler('esx_documents:CopyToPlayer', function(targetID, aForm)
+RegisterServerEvent('esx_documents:server:CopyToPlayer', function(targetID, aForm)
+    local src = source
+    local targetID = tonumber(targetID)
+    local targetxPlayer = ESX.GetPlayerFromId(targetID)
 
-    local _source   = source
-    local _targetid = ESX.GetPlayerFromId(targetID).source
-    local targetxPlayer = ESX.GetPlayerFromId(_targetid)
-    local _aForm    = aForm
-
-    MySQL.Async.insert("INSERT INTO user_documents (owner, data) VALUES (@owner, @data)", {['@owner'] = targetxPlayer.identifier, ['@data'] = json.encode(aForm)}, function(id)
-            if id ~= nil then
-                MySQL.Async.fetchAll('SELECT * FROM user_documents where id = @id', {['@id']=id}, function (result)
-                    --print("Trying to dump: " .. dump(result))
-                    if(result[1] ~= nil) then
+    if targetxPlayer then
+        MySQL.insert('INSERT INTO user_documents (owner, data) VALUES (?, ?)', { targetxPlayer.identifier, json.encode(aForm) }, function(id)
+            if id then
+                MySQL.query('SELECT * FROM user_documents where id = ?', { id }, function(result)
+                    if result[1] then
                         db_form = result[1]
                         db_form.data = json.decode(result[1].data)
-                        TriggerClientEvent('esx_documents:copyForm', _targetid, db_form)
-                        TriggerClientEvent('esx:showNotification', _targetid, _U('copy_from_player'))
-                        TriggerClientEvent('esx:showNotification', _source, _U('from_copied_player'))
+                        TriggerClientEvent('esx_documents:client:copyForm', targetID, db_form)
+                        TriggerClientEvent('esx:showNotification', targetID, _U('copy_from_player'))
+                        TriggerClientEvent('esx:showNotification', src, _U('from_copied_player'))
                     else
-                        TriggerClientEvent('esx:showNotification', _source, _U('could_not_copy_form_player'))
+                        TriggerClientEvent('esx:showNotification', src, _U('could_not_copy_form_player'))
                     end
                 end)
             else
-                TriggerClientEvent('esx:showNotification', _source, _U('could_not_copy_form_player'))
+                TriggerClientEvent('esx:showNotification', src, _U('could_not_copy_form_player'))
             end
-    end)
-
+        end)
+    end
 end)
-
-function dump(o)
-   if type(o) == 'table' then
-      local s = '{ '
-      for k,v in pairs(o) do
-         if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. dump(v) .. ','
-      end
-      return s .. '} '
-   else
-      return tostring(o)
-   end
-end

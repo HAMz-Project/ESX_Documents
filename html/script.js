@@ -1,4 +1,3 @@
-
 var toggleShow = false;
 var activeform = {};
 var id_count = 0;
@@ -16,7 +15,6 @@ function InputElement(_label, _type, _value, _can_be_empty, _can_be_edited)
 	this.elementid 		= _id;
 	
 	this.getHTML 	= function(_editable) {
-
 		let _html = "<div class=\"submit_input\">";
 		if (this.type == "textarea") _html = "<div class=\"submit_text_area\">";
 
@@ -50,7 +48,6 @@ function Form (_title, _subtitle, _elements, _submittable)
 	this.headerDateCreated 	= "",
 
 	this.loadFromJson = function(obj) {
-
 		this.headerTitle = obj.headerTitle;
 		this.headerSubtitle = obj.headerSubtitle;
 		this.headerFirstName = obj.headerFirstName;
@@ -72,18 +69,14 @@ function Form (_title, _subtitle, _elements, _submittable)
 	}
 
 	this.sign = function () {
-		//alert("HMM?");
 		this.signed = true;
 		$("#signature_block").addClass("signature_block_signed");
 		$("#signature_block").html(activeform.headerFirstName + " " + activeform.headerLastName + "<br>" + this.headerJobLabel + " - " + this.headerJobGrade + "<br>" + getCreationDate());
 	}
 
 	this.submit = function() { 
-
 		activeform.headerDateCreated = getCreationDate();
-
 		let can_submit = true;
-
 		for (let i=0; i<activeform.elements.length; i++)
 		{	
 			
@@ -92,9 +85,7 @@ function Form (_title, _subtitle, _elements, _submittable)
 			{
 				can_submit = false;
 				$("#" + _element.elementid).addClass("must_fill");
-				//console.log("Element: " + _element)
 			}
-			
 
 			activeform.elements[i].value = String($("#" + activeform.elements[i].elementid).val());
 		}
@@ -102,20 +93,15 @@ function Form (_title, _subtitle, _elements, _submittable)
 		var json_string = JSON.stringify(activeform);
 		
 		if (can_submit) {
-			$.post('http://esx_documents/form_submit', json_string);
+			$.post('https://esx_documents/form_submit', json_string);
 			activeform.close();
 		}
-		
 	}
 
 	this.load = function() {}
-	
 	this.givecopy = function () {}
-
 	this.print = function () { 
-
 		/* Create Header */
-
 		html_header  = "<div id=\"section_header\">";
 		html_header += "<div id=\"button_close\">X</div>";
 		html_header += "<div id=\"header_title\">" + this.headerTitle + "</div>";
@@ -144,9 +130,7 @@ function Form (_title, _subtitle, _elements, _submittable)
 		$("#main_container").append(html_header);
 
 		/* Create main body */
-
 		$("#main_container").append("<div id=\"section_input\"></div>");
-		
 		let count = 0;
 
 		for (let i=0; i<this.elements.length; i++)
@@ -198,20 +182,15 @@ function Form (_title, _subtitle, _elements, _submittable)
 	this.close = function() {
 		$("#main_container").html("");
 		$("#main_container").css({display: 'none'});
-		$.post('http://esx_documents/form_close', JSON.stringify({}));
+		$.post('https://esx_documents/form_close', JSON.stringify({}));
 	}
 }
-
-
-
 
 $(document).keyup(function(e) {
 	if (e.keyCode === 27) activeform.close();
 });
 
-
 window.addEventListener('message', function(event){
-
    	var edata = event.data;
    	if (edata.type == "ShowDocument") {
 
@@ -224,7 +203,6 @@ window.addEventListener('message', function(event){
    		$.getScript("language_" + edata.data.locale + ".js", function(data, textStatus){
    			try {
         		activeform.print();
-        		console.log("we loaded" + "language_" + edata.data.locale + ".js");
         		$("#main_container").css({
    					display: 'block'
    				});
@@ -232,8 +210,6 @@ window.addEventListener('message', function(event){
         		console.log("Error loading language: " + e);
     		}
 		});
-
-
    	}
 
    	if (edata.type == "createNewForm") {
@@ -244,7 +220,6 @@ window.addEventListener('message', function(event){
    		$.getScript("language_" + edata.data.locale + ".js", function(data, textStatus){
    			try {
         		activeform.print();
-        		console.log("we loaded" + "language_" + edata.data.locale + ".js");
         		$("#main_container").css({
    					display: 'block'
    				});
@@ -252,17 +227,12 @@ window.addEventListener('message', function(event){
         		console.log("Error loading language: " + e);
     		}
 		});
-
    	}
-
 });
-
-
 
 function getCreationDate()
 {
 	let d = new Date();
-
 	let month = d.getMonth()+1;
 	let day = d.getDate();
 	let hours = d.getHours();
@@ -273,29 +243,3 @@ function getCreationDate()
 
    	return output
 }
-
-
-$(document).ready(function(){
-
-	// TEST FORM FOR BROWSER EDITING
-	/* 
-	var tmp = [
-	new InputElement("ΗΜΕΡΟΜΗΝΙΑ ΣΥΜΒΑΝΤΟΣ", "input", "432", false),
-	new InputElement("ΤΟΠΟΘΕΣΙΑ ΣΥΜΒΑΝΤΟΣ", "input", "", false),
-	new InputElement("ΛΟΙΠΕΣ ΠΛΗΡΟΦΟΡΙΕΣ", "input", "", true),
-	new InputElement("ΚΑΤΑΘΕΣΗ", "textarea", "12321313123131", false, false)
-	];
-	var tmp_form = new Form("ΚΑΤΑΘΕΣΗ", "Επίσημη κατάθεση μάρτυρα.", tmp);
-	activeform = tmp_form;
-	activeform.headerFirstName = "Alonzo";
-	activeform.headerLastName = "Perrero";
-	activeform.headerDateOfBirth = "25/08/1988";
-	activeform.submittable = true;
-	activeform.print();
-	
-	   		$("#main_container").css({
-   			display: 'block'
-   		});
-   		*/
-   		
-});
